@@ -1,0 +1,16 @@
+# Skill development workspaces (test runs, not part of skill)
+*-workspace/
+
+# Python artifacts
+__pycache__/
+*.pyc
+.venv/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

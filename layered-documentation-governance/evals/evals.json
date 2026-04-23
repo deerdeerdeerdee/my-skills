@@ -1,0 +1,41 @@
+{
+  "skill_name": "layered-documentation-governance",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We just discovered that our video streaming system requires H.264 Constrained Baseline profile (no B-frames) for WebRTC compatibility. MediaMTX rejects streams with B-frames. This is a hard requirement that will cause the system to fail if violated. Should we document this? If so, where and how?",
+      "expected_output": "Should update root CLAUDE.md and AGENTS.md with a 'Video Encoding Constraints' section explaining the B-frame limitation, the reason (WebRTC RFC 7742), and link to detailed docs. Should also update edge-agent component docs with specific encoding parameters.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Our backend-api project just switched from pip to uv for dependency management. We updated pyproject.toml and Dockerfile. The commands for adding dependencies, syncing, and running the app are all different now. What documentation needs to be updated?",
+      "expected_output": "Should update backend-api/CLAUDE.md and backend-api/AGENTS.md with new dependency management commands (uv add, uv sync, uv run). Should include examples of common tasks. Root docs don't need updating since this is component-specific.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "We're starting to implement the edge-agent component in C++20. We just created the edge-agent/ directory with CMakeLists.txt and src/ folder. This will be a major component with its own tech stack (C++, CMake, GStreamer). What documentation should we create?",
+      "expected_output": "Should create edge-agent/CLAUDE.md and edge-agent/AGENTS.md with C++ development guidelines, CMake build commands, GStreamer usage, and component-specific constraints. Should also update root CLAUDE.md/AGENTS.md to add edge-agent to the component index.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "We just completed Phase 1 (Real-time video main link) and are moving to Phase 2 (Device access and status plane). The goals and priorities are different now. Should we update documentation?",
+      "expected_output": "Should update root CLAUDE.md and AGENTS.md to reflect phase transition: update 'Current Status' to P2, mark P1 as completed with date, list P1 achievements, and outline P2 goals. This helps agents understand current priorities.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "I just fixed a bug where a null pointer exception was crashing the app. It was a simple one-line fix checking if the variable is null before using it. Should I document this?",
+      "expected_output": "No, this doesn't need documentation. It's a one-off bug fix that doesn't reveal an architectural constraint. The fix is in the code itself. Fails the three-question test: while it was a pitfall, it's now fixed in code, and documenting every bug fix would clutter the docs.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "I'm experimenting with using Redis for caching, but we haven't decided if we'll keep it yet. Should I add Redis setup instructions to CLAUDE.md?",
+      "expected_output": "No, don't document temporary experiments. Wait until the decision is made to adopt Redis permanently. Fails the three-question test: it might not be valid in 6 months if we decide not to use Redis.",
+      "files": []
+    }
+  ]
+}
