@@ -1,6 +1,6 @@
 ---
 name: layered-documentation-governance
-description: PROACTIVELY maintain CLAUDE.md/AGENTS.md when users complete features, finish phases, add files/directories, notice stale content, or create ADRs/docs. Triggers on completion signals ("finished X", "completed Y", "added Z"), phase transitions ("P1 done", "moving to P2"), staleness observations ("says X but actually Y", "outdated", "too long"), and documentation work (new ADR, new component, new guide). Does NOT wait for explicit "update docs" requests - detects when documentation SHOULD be updated and proactively offers to do it.
+description: Use when users ask questions about CLAUDE.md or AGENTS.md files ('should there be...?', 'do we need to update...?', 'what about...?'), notice documentation problems ('says X but actually Y', 'outdated', 'too long', 'missing X'), announce completed work ('finished implementing X', 'completed P1', 'added new file/directory/guide'), or create new components. Maintains layered CLAUDE.md/AGENTS.md across project directories - creates pairs for new components, updates when stale or work completes.
 ---
 
 # Layered Documentation Governance
