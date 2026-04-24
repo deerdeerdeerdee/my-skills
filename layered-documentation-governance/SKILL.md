@@ -1,6 +1,6 @@
 ---
 name: layered-documentation-governance
-description: Use when users ask questions about CLAUDE.md or AGENTS.md files ('should there be...?', 'do we need to update...?', 'what about...?'), notice documentation problems ('says X but actually Y', 'outdated', 'too long', 'missing X'), announce completed work ('finished implementing X', 'completed P1', 'added new file/directory/guide'), or create new components. Maintains layered CLAUDE.md/AGENTS.md across project directories - creates pairs for new components, updates when stale or work completes.
+description: PROACTIVELY maintain CLAUDE.md/AGENTS.md whenever users complete features, add files/directories, notice stale docs, or create components. Triggers on questions ('should there be...?', 'do we need to update...?'), problems ('says X but actually Y', 'outdated', 'too long'), and completion signals ('finished X', 'completed P1', 'added Y'). Use this skill even if the user doesn't explicitly mention documentation - if they just completed work or added files, check if docs need updating. Maintains layered structure across project directories.
 ---
 
 # Layered Documentation Governance
@@ -9,9 +9,11 @@ Maintain CLAUDE.md and AGENTS.md across a project's directory tree. Keep them sy
 
 ## Output Contract
 
-When invoked, your response MUST follow this exact structure in two stages:
+When invoked, use this two-stage structure to ensure your recommendations are actionable:
 
 ### Stage 1 — Decision (concise)
+
+The three-question test helps you avoid over-documentation (which creates maintenance burden) while catching genuine pitfalls. Answer all three:
 
 ```
 ## Three-Question Test
@@ -65,7 +67,7 @@ If Decision is **Skip** or **Defer**, omit Stage 2 and give a 1-2 sentence reaso
 
 ## Holistic Update Principle
 
-**CRITICAL**: When updating documentation, do NOT just add new files (patching). You MUST update related existing files to keep them current.
+When updating documentation, updating related existing files prevents documentation rot. Here's why: if you only add new content without updating old content, agents consulting the old files will miss the new information, leading to inconsistent behavior across the codebase.
 
 **Anti-pattern** (patching):
 - Add ADR-0005 ✓
@@ -118,7 +120,7 @@ Do NOT create for sub-modules (e.g., `app/api/`, `src/components/`).
 
 ## Sync Rule
 
-CLAUDE.md and AGENTS.md must contain equivalent content. When you update one, update the other in the same turn.
+CLAUDE.md and AGENTS.md should contain equivalent content to ensure consistency across different agent systems. When you update one, update the other in the same turn to prevent divergence.
 
 ## Division of Labor with `docs/`
 
@@ -149,6 +151,18 @@ Before adding new content, check for **outdated information** that needs updatin
 3. Include both in your execution plan
 
 **Example**: If adding multi-player.html to web-console, check if web-console/CLAUDE.md still says "P1 in progress" — if so, update that too.
+
+## When NOT to Use This Skill
+
+Skip this skill for:
+
+- **Code-only changes**: Refactoring that doesn't change behavior or add constraints
+- **Documentation in `docs/`**: This skill is for CLAUDE.md/AGENTS.md, not detailed docs
+- **Temporary debugging**: Adding console.log or temporary print statements
+- **In-progress work**: Wait until the feature is stable before documenting
+- **Self-documenting code**: Well-named functions/variables don't need CLAUDE.md entries
+- **One-off scripts**: Throwaway automation that won't be reused
+- **Dependency updates**: Routine package bumps without API changes
 
 ## Examples
 
@@ -363,6 +377,93 @@ Prompt: "Fixed a null pointer with a one-line null check."
 **Decision**: Skip
 
 The fix is self-documenting in code. Document only if the bug reveals a systemic pattern (e.g., "all gRPC responses need null checks") that agents writing new code need to know.
+```
+
+## Tricky Cases
+
+### When scope is unclear
+
+Prompt: "Added retry logic to API client."
+
+**Question**: Is this cross-cutting (root) or component-specific (subdirectory)?
+
+**Answer**: Check if other components use this API client. If yes → root (cross-cutting constraint). If no → subdirectory only.
+
+```
+## Three-Question Test
+1. Pitfall? → Yes (agents might not know about retry behavior)
+2. Already in docs? → No
+3. Valid in 6mo? → Yes
+
+**Decision**: Update
+
+## Execution Plan
+
+### File: backend-api/CLAUDE.md + backend-api/AGENTS.md
+**Why**: API client is used only within backend-api
+**Action**: Add to "Common Patterns" section
+**Key content**:
+- API client has automatic retry with exponential backoff
+- Max 3 retries, 1s/2s/4s delays
+- Retries on 5xx and network errors only
+- Link to: `src/utils/api_client.py` for implementation
+```
+
+### When staleness is partial
+
+Prompt: "The backend-api/CLAUDE.md mentions both pip and uv commands."
+
+**Question**: Should I update just the pip parts or the whole section?
+
+**Answer**: Update the whole section. Partial migration creates confusion.
+
+```
+## Three-Question Test
+1. Pitfall? → Yes (mixed commands will confuse agents)
+2. Already in docs? → Partially (contradictory info)
+3. Valid in 6mo? → Yes
+
+**Decision**: Update
+
+## Execution Plan
+
+### File: backend-api/CLAUDE.md + backend-api/AGENTS.md
+**Why**: Partial staleness is still staleness
+**Action**: Replace entire "Dependency Management" section
+**Key content**:
+- Remove ALL pip references
+- Keep only uv commands
+- Note: "Do NOT use pip install; pyproject.toml + uv.lock are authoritative"
+```
+
+### When multiple docs conflict
+
+Prompt: "Root CLAUDE.md says use TCP for RTSP, but edge-agent/CLAUDE.md says UDP is fine."
+
+**Question**: Which one is correct?
+
+**Answer**: Investigate first, then update both to match reality.
+
+```
+## Three-Question Test
+1. Pitfall? → Yes (conflicting guidance causes bugs)
+2. Already in docs? → Yes but contradictory
+3. Valid in 6mo? → Yes (once resolved)
+
+**Decision**: Update (after investigation)
+
+## Execution Plan
+
+### Step 1: Investigate
+- Check git history: when/why was each added?
+- Check actual code: what does edge-agent use?
+- Check docs/40-operations/: any troubleshooting guides?
+
+### Step 2: Update both files
+**File**: CLAUDE.md (root) + edge-agent/CLAUDE.md
+**Why**: Conflicting docs are worse than no docs
+**Action**: Update both to reflect correct constraint
+**Key content**: (depends on investigation result)
 ```
 
 ## Anti-Patterns

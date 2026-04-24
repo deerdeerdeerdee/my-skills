@@ -144,12 +144,31 @@ class StalenessChecker:
         """Check if documentation mentions files that don't exist or misses new files."""
         # Extract file paths mentioned in documentation
         # Pattern: paths like src/foo.py, components/Bar.tsx, etc.
+        # Require at least one slash and reasonable file extension
         mentioned_files = set()
-        for match in re.finditer(r'[\w/-]+\.\w+', content):
+        for match in re.finditer(r'[\w/-]+/[\w/-]+\.\w{2,5}', content):
             path_str = match.group(0)
-            # Skip URLs and common false positives
-            if any(x in path_str for x in ['http', 'localhost', 'example.com']):
+
+            # Skip URLs and network addresses
+            if any(x in path_str for x in ['http', 'localhost', 'example.com', '127.0', '0.0.0', '192.168']):
                 continue
+
+            # Skip if it looks like a version number (e.g., "2.x", "3.11")
+            if re.match(r'^\d+\.\d+', path_str):
+                continue
+
+            # Skip common abbreviations and false positives
+            if path_str in ['e.g', 'i.e', 'etc.', 'vs.']:
+                continue
+
+            # Skip if it contains common non-file patterns
+            if any(x in path_str.lower() for x in ['.case', '.com', '.org', '.net', 'dot.', 'kebab-', 'snake_']):
+                continue
+
+            # Skip technical terms that look like paths but aren't
+            if any(x in path_str for x in ['H.264', 'H.265', 'MPEG-', 'UTF-']):
+                continue
+
             mentioned_files.add(path_str)
 
         # Check if mentioned files exist
