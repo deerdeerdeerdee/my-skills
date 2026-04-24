@@ -63,6 +63,38 @@ If Decision is **Skip** or **Defer**, omit Stage 2 and give a 1-2 sentence reaso
 - It's obvious (e.g., "Python files end in .py")
 - It will be stale in months (specific versions, temporary URLs)
 
+## Holistic Update Principle
+
+**CRITICAL**: When updating documentation, do NOT just add new files (patching). You MUST update related existing files to keep them current.
+
+**Anti-pattern** (patching):
+- Add ADR-0005 ✓
+- Add new section to edge-agent.md ✓
+- **Forget to update web-console/CLAUDE.md** ✗ ← This causes documentation rot
+
+**Correct approach** (holistic update):
+- Add ADR-0005 ✓
+- **Update** edge-agent.md (modify existing timestamp constraint) ✓
+- **Update** media-gateway.md (rewrite timestamp section) ✓
+- **Update** web-console.md (rewrite time alignment section) ✓
+- **Update** root CLAUDE.md/AGENTS.md ✓
+- **Update** subdirectory CLAUDE.md/AGENTS.md if affected ✓
+
+### Update Checklist
+
+When making significant changes (new ADR, phase transition, major feature), check ALL of:
+
+```
+□ Root CLAUDE.md / AGENTS.md (always sync both)
+□ Affected subdirectory CLAUDE.md / AGENTS.md
+□ docs/00-overview/03-phase-plan.md (if phase-related)
+□ Related component design docs (docs/20-components/)
+□ Related ADRs (docs/10-decisions/)
+□ Related operations docs (docs/40-operations/)
+```
+
+**Detection**: If you find yourself only creating new files without modifying existing ones, STOP and ask: "What existing docs need updating?"
+
 ## Scope Rules
 
 **Root CLAUDE.md/AGENTS.md** — cross-cutting content:
@@ -70,11 +102,13 @@ If Decision is **Skip** or **Defer**, omit Stage 2 and give a 1-2 sentence reaso
 - Architecture, design decisions (link to ADRs)
 - Cross-component constraints (encoding, network, time sync)
 - Index to subdirectory docs
+- **Length target**: <150 lines (keep it scannable, link to details)
 
 **Subdirectory CLAUDE.md/AGENTS.md** — tech-stack-specific content:
 - Local commands, dependency management
 - Code style and conventions
 - Component-specific constraints
+- **Length target**: <100 lines per file
 
 **CREATE** a new subdirectory doc pair only when:
 - A new top-level implementation directory is added, AND
@@ -98,6 +132,23 @@ CLAUDE.md and AGENTS.md must contain equivalent content. When you update one, up
 | **Critical constraints quick-ref** | **CLAUDE.md / AGENTS.md** |
 
 CLAUDE.md/AGENTS.md is an **index**, not detailed documentation. Link to `docs/` for depth.
+
+## Staleness Detection
+
+Before adding new content, check for **outdated information** that needs updating:
+
+**Red flags** (indicates stale content):
+- "Phase X in progress" when X is actually completed
+- Missing recently added files/features in project structure
+- Old tech stack references (e.g., "pip" when project uses "uv")
+- Outdated status markers (🔄 when should be ✅)
+
+**When you detect staleness**:
+1. Update the stale content FIRST
+2. Then add new content
+3. Include both in your execution plan
+
+**Example**: If adding multi-player.html to web-console, check if web-console/CLAUDE.md still says "P1 in progress" — if so, update that too.
 
 ## Examples
 
@@ -236,7 +287,53 @@ Prompt: "Completed P1, moving to P2."
 ### File: docs/00-overview/03-phase-1-plan.md (if exists)
 **Why**: Phase plan tracks stage completion
 **Action**: Update stage markers (P1 → 🔄 to ✅)
+
+### File: web-console/CLAUDE.md + web-console/AGENTS.md
+**Why**: Subdirectory docs must reflect P1 completion (holistic update, not just root)
+**Action**: Update "Current Status" section
+**Key content**:
+- Status: P1 ✅ Completed
+- Add P1 deliverables (multi-player.html, etc.)
 ```
+
+### Holistic update example (correct approach)
+
+Prompt: "Added multi-stream playback feature (multi-player.html)."
+
+```
+## Three-Question Test
+1. Pitfall? → Yes (agents won't know about new page, web-console/CLAUDE.md is stale)
+2. Already in docs? → No (new feature)
+3. Valid in 6mo? → Yes (core feature)
+
+**Decision**: Update
+
+## Execution Plan
+
+### File: web-console/CLAUDE.md + web-console/AGENTS.md
+**Why**: Subdirectory docs are stale (missing multi-player.html, status outdated)
+**Action**: Update "Current Pages" section AND "Current Status" section
+**Key content**:
+- Add multi-player.html to page list (⭐ P1 Deliverable)
+- Update status from "P1 in progress" to "P1 ✅ Completed"
+- Update project structure to include multi-player.html
+
+### File: CLAUDE.md (root) + AGENTS.md (root)
+**Why**: Root docs need P1 completion summary
+**Action**: Update "Current Status" section
+**Key content**:
+- Status: P1 ✅ Completed (2026-04-24)
+- Add P1 deliverables: multi-stream playback, WebRTC <1s latency, etc.
+
+### File: docs/00-overview/03-phase-1-plan.md
+**Why**: Phase plan needs completion marker
+**Action**: Update P1 section
+**Key content**:
+- Change P1 from 🔄 to ✅
+- Add completion date
+```
+
+**Note**: This is holistic update (3 locations), not patching (just adding multi-player.html).
 
 ### Temporary experiment (Skip)
 
@@ -270,12 +367,19 @@ The fix is self-documenting in code. Document only if the bug reveals a systemic
 
 ## Anti-Patterns
 
+- **Don't patch, update holistically** — when adding new content, update related existing docs
 - **Don't duplicate `docs/`** — link to it instead
 - **Don't dump full file contents** — describe changes in 1 line
 - **Don't add temporary notes** — wait for decisions
 - **Don't skip the sync** — always update CLAUDE.md AND AGENTS.md together
 - **Don't write long explanations** — be terse; the user can ask for details
+- **Don't ignore staleness** — if you see outdated info, flag it in your plan
+- **Don't let root CLAUDE.md bloat** — if >150 lines, suggest refactoring to subdirectory docs
 
 ## Principle
 
 The goal is useful quick-reference docs that agents actually consult. Long manuals get ignored. Keep it short, link outward, sync both files.
+
+**Core philosophy**: Documentation is a living system, not a patch collection. When you add new content, update related existing content to keep the whole system coherent. Stale docs are worse than no docs — they mislead agents and waste time.
+
+**Quality over quantity**: A concise, up-to-date 100-line CLAUDE.md beats a bloated, stale 300-line version.
