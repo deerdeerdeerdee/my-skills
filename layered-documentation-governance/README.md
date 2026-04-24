@@ -73,6 +73,69 @@ project-root/
 | **How agents code here** | **CLAUDE.md / AGENTS.md** |
 | **Critical constraints** | **CLAUDE.md / AGENTS.md** |
 
+## Bundled Resources
+
+This skill includes automation tools to help maintain documentation quality:
+
+### Staleness Detection Script
+
+`scripts/check_staleness.py` - Automated documentation health checker
+
+**Features**:
+- Detects outdated status markers ("P1 in progress" when completed)
+- Finds missing new files in project structure sections
+- Identifies tech stack mismatches (pip vs uv, npm vs yarn)
+- Checks file length limits (root <150 lines, subdirs <100 lines)
+- Verifies CLAUDE.md/AGENTS.md synchronization
+- Scans for references to non-existent files
+
+**Usage**:
+```bash
+# From project root
+python /path/to/skill/scripts/check_staleness.py
+
+# With verbose output
+python /path/to/skill/scripts/check_staleness.py --verbose
+
+# Check specific directory
+python /path/to/skill/scripts/check_staleness.py --root /path/to/project
+```
+
+**Example output**:
+```
+📋 Staleness Report (3 issues)
+
+⚠️ WARNING (2)
+  web-console/CLAUDE.md
+    Status says "P1 in progress" but should be "P1 ✅ Completed"
+    💡 Check git log and update status if phase is completed
+
+  CLAUDE.md:287
+    287 lines (target: <150 lines)
+    💡 Consider refactoring details to subdirectory docs or docs/
+
+ℹ️ INFO (1)
+  web-console/CLAUDE.md
+    Recent addition 'multi-player.html' not mentioned in docs
+    💡 Consider adding to project structure or relevant section
+```
+
+### Update Checklist Template
+
+`references/checklist-template.md` - Standardized update checklist
+
+**Use when**:
+- Making significant documentation changes
+- Ensuring holistic updates (not just patching)
+- Verifying all related files are updated
+
+**Includes**:
+- Core files checklist (root, subdirectories, docs/)
+- Staleness verification steps
+- Sync verification (CLAUDE.md ↔ AGENTS.md)
+- Common scenario checklists (new feature, phase transition, tech stack change)
+- Anti-patterns to avoid
+
 ## Examples
 
 See [SKILL.md](./SKILL.md) for detailed examples including:
@@ -81,6 +144,36 @@ See [SKILL.md](./SKILL.md) for detailed examples including:
 - Tech stack change (pip → uv migration)
 - New subdirectory creation (edge-agent C++ component)
 - Phase transition (P1 → P2)
+
+## CI Integration
+
+You can integrate the staleness checker into your CI pipeline:
+
+```yaml
+# .github/workflows/docs-check.yml
+name: Documentation Check
+on: [pull_request]
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check documentation staleness
+        run: |
+          python ~/.claude/skills/layered-documentation-governance/scripts/check_staleness.py
+```
+
+Or as a pre-commit hook:
+
+```bash
+# .git/hooks/pre-commit
+#!/bin/bash
+python ~/.claude/skills/layered-documentation-governance/scripts/check_staleness.py
+if [ $? -ne 0 ]; then
+    echo "Documentation staleness detected. Please fix before committing."
+    exit 1
+fi
+```
 
 ## License
 
