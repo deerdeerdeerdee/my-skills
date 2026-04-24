@@ -1,6 +1,6 @@
 ---
 name: layered-documentation-governance
-description: Maintain layered CLAUDE.md and AGENTS.md files across project directories with intelligent update triggers. Use this skill when the user asks to update documentation, sync CLAUDE.md/AGENTS.md, or when you detect hard constraints being introduced, major tech stack changes, directory structure changes, phase transitions, or when the user asks "should I document this?". This skill helps prevent documentation rot in multi-agent collaborative projects by keeping agent context files synchronized and up-to-date.
+description: PROACTIVELY maintain CLAUDE.md/AGENTS.md when users complete features, finish phases, add files/directories, notice stale content, or create ADRs/docs. Triggers on completion signals ("finished X", "completed Y", "added Z"), phase transitions ("P1 done", "moving to P2"), staleness observations ("says X but actually Y", "outdated", "too long"), and documentation work (new ADR, new component, new guide). Does NOT wait for explicit "update docs" requests - detects when documentation SHOULD be updated and proactively offers to do it.
 ---
 
 # Layered Documentation Governance

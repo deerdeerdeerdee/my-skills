@@ -1,0 +1,82 @@
+[
+  {
+    "query": "i just finished implementing the multi-camera playback feature, added a new file called multi-player.html in web-console/static/. works great, tested with 2 streams. should i document this somewhere?",
+    "should_trigger": true
+  },
+  {
+    "query": "we just completed P1! all the deliverables are done - multi-stream playback, webrtc working, recording to disk. need to update the project status docs to reflect this milestone",
+    "should_trigger": true
+  },
+  {
+    "query": "hey so i noticed the backend-api/CLAUDE.md still mentions pip but we switched to uv like 2 weeks ago. the pyproject.toml is correct but the docs are stale. can you fix this?",
+    "should_trigger": true
+  },
+  {
+    "query": "i'm adding a new ADR (ADR-0005) about timestamp correction at source. it affects edge-agent, media-gateway, and web-console components. need to make sure all the docs are consistent",
+    "should_trigger": true
+  },
+  {
+    "query": "the root CLAUDE.md is getting really long, like 280 lines now. it has a ton of implementation details that probably belong in subdirectory docs. what should we do about this?",
+    "should_trigger": true
+  },
+  {
+    "query": "just created a new component directory called edge-agent/ with C++20 code. it's got its own build system (cmake), different tech stack from the python backend. should there be a CLAUDE.md in there?",
+    "should_trigger": true
+  },
+  {
+    "query": "i see web-console/CLAUDE.md says 'P1 in progress' but we actually finished P1 last week. also it doesn't mention the multi-player.html page we added. looks outdated",
+    "should_trigger": true
+  },
+  {
+    "query": "need to document this new constraint: WebRTC requires H.264 Constrained Baseline profile, no B-frames allowed. this is critical for edge-agent encoding. where should this go?",
+    "should_trigger": true
+  },
+  {
+    "query": "we're transitioning from Phase 1 to Phase 2 now. P1 delivered multi-stream playback, P2 will focus on device management and heartbeat. need to update all the phase-related docs",
+    "should_trigger": true
+  },
+  {
+    "query": "i added a new operations guide docs/40-operations/ntp-server-setup.md about deploying NTP servers. should the root CLAUDE.md reference this? it's pretty important for time sync",
+    "should_trigger": true
+  },
+  {
+    "query": "can you help me write a python function to calculate fibonacci numbers recursively? i need it for a coding interview tomorrow",
+    "should_trigger": false
+  },
+  {
+    "query": "the backend api is returning 500 errors when i try to fetch the camera list. can you help debug this? here's the error log: [stack trace...]",
+    "should_trigger": false
+  },
+  {
+    "query": "i'm trying to understand how the WebRTC WHEP protocol works. can you explain the handshake process and what SDP is?",
+    "should_trigger": false
+  },
+  {
+    "query": "need to refactor this react component to use hooks instead of class components. here's the current code: [code block]. can you convert it?",
+    "should_trigger": false
+  },
+  {
+    "query": "the docker compose setup isn't working on my machine. when i run docker compose up i get 'port 8000 already in use'. how do i fix this?",
+    "should_trigger": false
+  },
+  {
+    "query": "i want to add some console.log statements to debug why the video player isn't loading. where should i put them in the javascript code?",
+    "should_trigger": false
+  },
+  {
+    "query": "can you review this pull request? i changed the database schema to add a new column for user preferences. here's the migration file: [sql code]",
+    "should_trigger": false
+  },
+  {
+    "query": "i'm getting a typescript error 'Property X does not exist on type Y'. here's my code: [code]. what's wrong?",
+    "should_trigger": false
+  },
+  {
+    "query": "need to optimize this SQL query, it's taking 5 seconds to run. here's the query: SELECT * FROM recordings WHERE device_id = 'crane-001' ORDER BY timestamp DESC",
+    "should_trigger": false
+  },
+  {
+    "query": "i want to learn more about the architecture of this project. can you give me an overview of how the components interact? like what's the data flow from camera to browser?",
+    "should_trigger": false
+  }
+]
