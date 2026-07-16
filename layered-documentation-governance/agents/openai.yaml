@@ -1,0 +1,4 @@
+interface:
+  display_name: "Layered Documentation Governance"
+  short_description: "Converge docs with code and retire drift"
+  default_prompt: "Use $layered-documentation-governance to align this change with the repository's documentation authorities and retire superseded content."

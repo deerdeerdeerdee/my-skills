@@ -6,7 +6,7 @@ Personal collection of Claude Code / Codex / Cursor skills.
 
 | Skill | Description |
 |-------|-------------|
-| [layered-documentation-governance](./layered-documentation-governance) | Maintain synchronized CLAUDE.md and AGENTS.md across project directories using a three-question test |
+| [layered-documentation-governance](./layered-documentation-governance) | Converge repository docs with implementation in the same change and retire superseded content |
 
 ## Installation
 
