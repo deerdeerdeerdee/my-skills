@@ -232,6 +232,8 @@ function Test-AgentBrowserAuthArgumentSet {
         }
     }
 
+    # Only our canonical headless flag is allowed; duplicate/alternate launch flags fail closed.
+    if (@($Arguments | Where-Object { $_ -eq '--headless=new' }).Count -gt 1) { return $false }
     $positionalArguments = @()
     for ($index = 0; $index -lt $Arguments.Count; $index++) {
         $argument = $Arguments[$index]
@@ -250,7 +252,7 @@ function Test-AgentBrowserAuthArgumentSet {
         if ($matchedValueSwitch) {
             continue
         }
-        if ($argument -in @('--no-first-run', '--no-default-browser-check')) {
+        if ($argument -in @('--no-first-run', '--no-default-browser-check', '--headless=new')) {
             continue
         }
         if ($argument.StartsWith('--', [StringComparison]::Ordinal)) {
@@ -382,7 +384,7 @@ function Assert-AgentBrowserLocalCliArgs {
     }
     # CLI flags can occur after the command. Never allow a second routing source.
     foreach ($arg in $CommandArgs) {
-        if ($arg -match '^--(?:profile|session|session-name|namespace|restore(?:-[a-z-]+)?|state|cdp|headed|auto-connect|config|provider|engine|executable-path|args|extension|extensions|plugins)(?:=|$)' -or $arg -match '^-p') {
+        if ($arg -match '^--(?:profile|session|session-name|namespace|restore(?:-[a-z-]+)?|state|cdp|headed|headless|auto-connect|config|provider|engine|executable-path|args|extension|extensions|plugins)(?:=|$)' -or $arg -match '^-p') {
             Throw-AgentBrowserLocalUsageError "Prohibited agent-browser $Mode argument '$arg'."
         }
     }
@@ -431,6 +433,7 @@ function Get-AgentBrowserAuthStatus {
     if (-not $listeners) {
         return [pscustomobject]@{
             Ready = $false
+            Headless = $null
             PortOccupied = $false
             Pid = $null
             OwnerPid = $null
@@ -446,6 +449,7 @@ function Get-AgentBrowserAuthStatus {
         $owner = $listeners | Select-Object -First 1
         return [pscustomobject]@{
             Ready = $false
+            Headless = $null
             PortOccupied = $true
             Pid = $owner.OwningProcess
             OwnerPid = $owner.OwningProcess
@@ -462,6 +466,7 @@ function Get-AgentBrowserAuthStatus {
 
     return [pscustomobject]@{
         Ready = $ready
+        Headless = if ($expected) { '--headless=new' -in (Get-AgentBrowserCommandLineArguments -CommandLine $process.CommandLine) } else { $null }
         PortOccupied = $true
         Pid = $listener.OwningProcess
         OwnerPid = $listener.OwningProcess
@@ -489,11 +494,14 @@ function Assert-AgentBrowserAuthStartUrl {
 }
 
 function Start-AgentBrowserAuthCore {
-    param([Parameter(Mandatory)][string]$Url)
+    param([Parameter(Mandatory)][string]$Url, [switch]$Headless)
 
     $config = Get-AgentBrowserLocalConfig
     $status = Get-AgentBrowserAuthStatus
     if ($status.Ready) {
+        if ([bool]$status.Headless -ne [bool]$Headless) {
+            throw 'Authenticated browser is running in a different display mode. Use auth stop, then auth start with --headed or --headless. The existing browser was left running.'
+        }
         if ($Url -and $Url -ne 'about:blank') {
             Invoke-AgentBrowserAuthCore -CommandArgs @('open', $Url) | Out-Null
         }
@@ -511,7 +519,8 @@ function Start-AgentBrowserAuthCore {
         "--remote-debugging-port=$($config.CdpPort)",
         '--no-first-run',
         '--no-default-browser-check',
-        "--user-data-dir=$($config.AuthProfilePath)",
+        "--user-data-dir=$($config.AuthProfilePath)"
+    ) + $(if ($Headless) { @('--headless=new') } else { @() }) + @(
         $Url
     )
     # ArgumentList on Start-Process flattens strings and breaks profile paths with spaces.
@@ -531,16 +540,20 @@ function Start-AgentBrowserAuthCore {
     }
 
     Set-Content -LiteralPath (Join-Path $config.RuntimeDirectory 'auth-browser.pid') -Value $status.Pid
-    Write-AgentBrowserLocalLog -Event 'auth.start' -Data @{ pid = $status.Pid; port = $config.CdpPort }
+    Write-AgentBrowserLocalLog -Event 'auth.start' -Data @{ pid = $status.Pid; port = $config.CdpPort; headless = [bool]$Headless }
+    # CDP readiness does not imply the CLI's selected page has loaded the launch URL.
+    if ($Url -ne 'about:blank') {
+        Invoke-AgentBrowserAuthCore -CommandArgs @('open', $Url) | Out-Null
+    }
     return $status
 }
 
 function Start-AgentBrowserAuth {
-    param([string]$Url = 'about:blank')
+    param([string]$Url = 'about:blank', [switch]$Headless)
 
     Assert-AgentBrowserAuthStartUrl -Url $Url
     return Invoke-AgentBrowserAuthOperation -TimeoutMessage 'Timed out waiting for the authenticated browser startup lock.' -Operation {
-        Start-AgentBrowserAuthCore -Url $Url
+        Start-AgentBrowserAuthCore -Url $Url -Headless:$Headless
     }
 }
 
@@ -707,6 +720,8 @@ function Stop-AgentBrowserAuthCore {
     }
 
     Remove-Item -LiteralPath $markerPath -ErrorAction SilentlyContinue
+    # Release the reserved CLI connection before the next CDP endpoint starts.
+    Close-AgentBrowserAuthDaemon | Out-Null
     Write-AgentBrowserLocalLog -Event 'auth.stop' -Data @{ pid = $status.Pid }
     return [pscustomobject]@{ Stopped = $true; Reason = 'graceful-close' }
 }
@@ -1167,6 +1182,7 @@ function Get-AgentBrowserLocalStatus {
     $authStatus = Get-AgentBrowserAuthStatus -SkipDirectoryInitialization
     $auth = [pscustomobject]@{
         Ready = $authStatus.Ready
+        Headless = $authStatus.Headless
         PortOccupied = $authStatus.PortOccupied
         Pid = $authStatus.Pid
         OwnerPid = $authStatus.OwnerPid
@@ -1456,13 +1472,13 @@ Use one isolated temporary session per task. Independent test tasks may run in p
 agent-browser-local auth - 认证模式帮助 / Auth mode help
 
 用法 / Usage:
-  agent-browser-local auth start [url]
+  agent-browser-local auth start [url] [--headed|--headless]
   agent-browser-local auth run <command> [args...]
   agent-browser-local auth status
   agent-browser-local auth stop
 
-认证模式是串行的，并持续写入 profiles\work。手动关闭窗口通常会保留登录状态，但优先使用 auth stop 以便优雅关闭。手动关闭后，运行 auth status 和 status 检查所有权与状态。
-Auth mode is serial and continuously writes the work profile. Manually closing the window usually preserves state, but prefer auth stop for graceful shutdown. After a manual close, run auth status and status to check ownership and state.
+认证模式是串行的，并持续写入 profiles\work。默认有头；--headless 使用同一资料目录后台运行。切换模式前先 auth stop。手动关闭窗口通常会保留登录状态，但优先使用 auth stop 以便优雅关闭。手动关闭后，运行 auth status 和 status 检查所有权与状态。
+Auth mode is serial and continuously writes the work profile. Default is headed; --headless uses the same profile without a window. Stop before switching modes. Manually closing the window usually preserves state, but prefer auth stop for graceful shutdown. After a manual close, run auth status and status to check ownership and state.
 
 不要启动第二个共享 profiles\work 的 Chrome，不要设置全局 profile/session 环境变量，也不要检查认证数据。
 Do not launch a second Chrome sharing profiles\work, set global profile/session variables, or inspect authentication data.
@@ -1566,9 +1582,14 @@ function Invoke-AgentBrowserLocalCommand {
             if (-not $rest) { Throw-AgentBrowserLocalUsageError "Usage: agent-browser-local auth <start|run|status|stop> ...`n$(Get-AgentBrowserLocalHelpHint)" }
             switch ($rest[0]) {
                 'start' {
-                    if ($rest.Count -gt 2) { Throw-AgentBrowserLocalUsageError "Usage: agent-browser-local auth start [url]`n$(Get-AgentBrowserLocalHelpHint)" }
-                    $url = if ($rest.Count -gt 1) { $rest[1] } else { 'about:blank' }
-                    return Start-AgentBrowserAuth -Url $url
+                    $startArgs = @($rest | Select-Object -Skip 1)
+                    $modeArgs = @($startArgs | Where-Object { $_ -in @('--headed', '--headless') })
+                    $urlArgs = @($startArgs | Where-Object { $_ -notin @('--headed', '--headless') })
+                    if ($modeArgs.Count -gt 1 -or $urlArgs.Count -gt 1) {
+                        Throw-AgentBrowserLocalUsageError 'Usage: agent-browser-local auth start [url] [--headed|--headless]'
+                    }
+                    $url = if ($urlArgs.Count) { $urlArgs[0] } else { 'about:blank' }
+                    return Start-AgentBrowserAuth -Url $url -Headless:('--headless' -in $modeArgs)
                 }
                 'run' {
                     if ($rest.Count -lt 2) { Throw-AgentBrowserLocalUsageError "Usage: agent-browser-local auth run <command> [args...]`n$(Get-AgentBrowserLocalHelpHint)" }

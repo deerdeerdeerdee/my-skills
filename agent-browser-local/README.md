@@ -19,6 +19,8 @@ Defaults use the current user's home: runtime in `.agent-browser/local`, skill i
 
 ## Daily use
 
+Data lifetime and display mode are independent. Temporary browsing supports headless (`test new`) and headed (`test new --headed`); persistent browsing supports headed (`auth start`, or explicit `--headed`) and headless (`auth start --headless`). Temporary sessions retain state during their task but do not reuse the work profile across tasks.
+
 ```powershell
 $session = agent-browser-local test new qa
 try {
@@ -38,9 +40,16 @@ agent-browser-local test close $visible
 agent-browser-local auth start about:blank
 agent-browser-local auth run snapshot -i
 agent-browser-local auth stop
+
+# Background automation reuses the same work profile.
+agent-browser-local auth start https://example.com --headless
+agent-browser-local auth run snapshot -i
+agent-browser-local auth stop
 ```
 
 Commands after `run` use command-first syntax. New sessions are registered and checked before execution. Test sessions may run in parallel; auth operations are serialized. Each test close invalidates only its own registration after successful native close. Registrations prevent mistakes, not other same-user processes reading or editing local files.
+
+Auth start accepts one URL and at most one of `--headed`/`--headless`, in either order. It defaults to headed for compatibility and initial login. Starting in the same mode reuses the browser; a different mode fails without navigating or stopping it. Check `auth status` (`Headless` is true, false, or null for an absent/unverified process), stop a task-owned browser, then start the requested mode. `auth stop` gracefully closes Chrome and releases the reserved CLI connection. Both modes use the same profile, never concurrently. First login and site verification may require headed operation; websites can still expire sessions or require reauthentication. An established user preference for saved-login automation does not require repeated mode approval.
 
 The wrapper uses its own minimal CLI config and temporarily removes inherited `AGENT_BROWSER_*` overrides. Standard proxy variables remain available. It blocks routing overrides and unreviewed command families. `batch` accepts JSON arrays as arguments, validates every command and sends a normalized JSON document to the native CLI through stdin; nested batches are rejected and sessions close outside batches. Unknown commands fail closed so new upstream capabilities require review. This is not an operating-system sandbox or an authorization mechanism for external site mutations.
 
@@ -68,7 +77,7 @@ pwsh -NoProfile -File .\agent-browser-local\scripts\Test-AgentBrowserLocal.ps1
 pwsh -NoProfile -File .\agent-browser-local\scripts\Test-AgentBrowserLocal.ps1 -Smoke
 ```
 
-Regression checks use an isolated temporary config and do not access real authentication data. Optional smoke starts only task-owned temporary browser sessions, checks isolation and targeted close, and never runs doctor or the real work profile. Use `status` first for ordinary failures. See [policy](references/policy.md) and [troubleshooting](references/troubleshooting.md).
+Regression checks use an isolated temporary config and do not access real authentication data. Optional smoke starts only task-owned temporary browser sessions, checks isolation and targeted close, and verifies synthetic persistent cookies and localStorage across headed → headless → headed restarts of an empty temporary auth profile. It also checks mode conflicts preserve the running browser. It never runs doctor or the real work profile. Use `status` first for ordinary failures. See [policy](references/policy.md) and [troubleshooting](references/troubleshooting.md).
 
 ## Source layout
 

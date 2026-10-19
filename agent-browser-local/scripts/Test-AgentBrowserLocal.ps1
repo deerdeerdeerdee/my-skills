@@ -39,6 +39,7 @@ try {
             @('open','about:blank','--restore'), @('open','about:blank','--restore-save=always'),
             @('open','about:blank','--args=--user-data-dir=other'),
             @('open','about:blank','--profile=work'), @('doctor'), @('plugin','run','x'),
+            @('open','about:blank','--headless=new'),
             @('mcp'), @('chat','do something'), @('dashboard','start'), @('unknown-new-command'),
             @('batch','["close","--all"]'), @('batch','["batch","[\"connect\",\"9333\"]"]'),
             @('batch'), @('batch','{}'), @('batch','[1]'), @('close','--all')
@@ -82,12 +83,18 @@ try {
             else { Set-Item "Env:$name" $saved[$name] }
         }
     }
-    # Retained auth process checks: exact profile/port/flags, no headless or foreign profile.
+    # Exact profile/port/flags, with only the canonical headless flag allowed.
     $config = Get-AgentBrowserLocalConfig
     $authArgs = @('--remote-debugging-address=127.0.0.1','--remote-debugging-port=9333',
         "--user-data-dir=$($config.AuthProfilePath)",'--no-first-run','--no-default-browser-check','about:blank')
     Assert-Check (& $module { param($a,$c) Test-AgentBrowserAuthArgumentSet -Arguments $a -Config $c } $authArgs $config) 'exact auth launch accepted'
-    Assert-Check (-not (& $module { param($a,$c) Test-AgentBrowserAuthArgumentSet -Arguments $a -Config $c } ($authArgs + '--headless=new') $config)) 'headless auth rejected'
+    Assert-Check (& $module { param($a,$c) Test-AgentBrowserAuthArgumentSet -Arguments $a -Config $c } ($authArgs + '--headless=new') $config) 'canonical headless auth accepted'
+    foreach ($flags in @(@('--headless'), @('--headless=old'), @('--headless=new','--headless=new'), @('--no-sandbox'))) {
+        Assert-Check (-not (& $module { param($a,$c) Test-AgentBrowserAuthArgumentSet -Arguments $a -Config $c } ($authArgs + $flags) $config)) 'unexpected launch flags rejected'
+    }
+    foreach ($invalidStart in @(@('auth','start','--headed','--headless'), @('auth','start','--headless','--headless'), @('auth','start','--unknown'), @('auth','start','https://example.com','https://example.org'))) {
+        Assert-Rejected { Invoke-AgentBrowserLocalCommand -Arguments $invalidStart } 'invalid auth start rejected before launch'
+    }
     Assert-Check (-not (& $module { param($a,$c) Test-AgentBrowserAuthArgumentSet -Arguments $a -Config $c } ($authArgs + '--user-data-dir=foreign') $config)) 'duplicate foreign profile rejected'
     $processResult = & $module { param($exe) Invoke-BoundedAgentBrowserProcess -Executable $exe -Arguments @('-NoProfile','-Command','[Console]::WriteLine("argv-ok")') -TimeoutSeconds 5 } (Join-Path $PSHOME 'pwsh.exe')
     Assert-Check ($processResult.ExitCode -eq 0 -and $processResult.StdOut.Trim() -eq 'argv-ok') 'bounded runner captures output'
@@ -145,6 +152,10 @@ try {
             Invoke-AgentBrowserTest -Session $a -CommandArgs @('fill','#name','install close') | Out-Null
             Invoke-AgentBrowserTest -Session $a -CommandArgs @('click','#save') | Out-Null
             Assert-Check ((Invoke-AgentBrowserTest -Session $a -CommandArgs @('get','text','#result')) -match 'install close') 'real local form interaction'
+            Invoke-AgentBrowserTest -Session $a -CommandArgs @('eval', 'localStorage.setItem("abl-test", "temporary")') | Out-Null
+            Invoke-AgentBrowserTest -Session $b -CommandArgs @('open',$fixtureUrl) | Out-Null
+            Assert-Check ((Invoke-AgentBrowserTest -Session $b -CommandArgs @('eval', 'localStorage.getItem("abl-test")')) -notmatch 'temporary') 'temporary sessions do not share stored data'
+            Invoke-AgentBrowserTest -Session $b -CommandArgs @('open','about:blank') | Out-Null
             Invoke-AgentBrowserTest -Session $a -CommandArgs @('open','about:blank') | Out-Null
             Invoke-AgentBrowserTest -Session $a -CommandArgs @('eval','window.__ablIsolation = 123') | Out-Null
             $other = Invoke-AgentBrowserTest -Session $b -CommandArgs @('eval','typeof window.__ablIsolation')
@@ -163,13 +174,34 @@ try {
             # Use an empty temporary profile, never the real managed work profile.
             $authBefore = Get-AgentBrowserAuthStatus
             Assert-Check (-not $authBefore.PortOccupied) 'temporary auth port is free'
-            $started = Start-AgentBrowserAuth -Url about:blank
             $authOwned = $true
-            Assert-Check $started.Ready 'temporary headed auth browser ready'
-            Assert-Check ((Invoke-AgentBrowserAuth -CommandArgs @('get','url')) -match 'about:blank') 'temporary auth CDP operation'
-            $stopped = Stop-AgentBrowserAuth
-            Assert-Check $stopped.Stopped 'temporary auth closes with checked ownership'
-            Close-AgentBrowserAuthDaemon | Out-Null
+            $started = Start-AgentBrowserAuth -Url $fixtureUrl
+            Assert-Check ($started.Ready -and $started.Headless -eq $false) 'temporary headed auth browser ready'
+            Assert-Check ((Invoke-AgentBrowserAuth -CommandArgs @('get','url')) -match [regex]::Escape($fixtureUrl)) 'auth startup selects and loads requested page'
+            Invoke-AgentBrowserAuth -CommandArgs @('eval', 'localStorage.setItem("abl-persist", "retained"); document.cookie="abl_cookie=retained; Max-Age=3600; Path=/"') | Out-Null
+            $same = Start-AgentBrowserAuth -Url about:blank
+            Assert-Check ($same.Pid -eq $started.Pid) 'same display mode reuses existing browser'
+            Assert-Rejected { Start-AgentBrowserAuth -Headless -Url $fixtureUrl } 'mode change requires stop'
+            Assert-Check ((Get-AgentBrowserAuthStatus).Pid -eq $started.Pid) 'mode conflict preserves existing browser'
+            Assert-Check (Stop-AgentBrowserAuth).Stopped 'temporary headed auth closes'
+            $authOwned = $false
+            # Same temporary profile, through the real CLI entrypoint.
+            $headless = & (Join-Path $RuntimeRoot 'agent-browser-local.ps1') auth start --headless $fixtureUrl
+            $authOwned = $true
+            Assert-Check ($headless.Ready -and $headless.Headless -eq $true) 'persistent headless entrypoint ready'
+            Assert-Check ((Get-Process -Id $headless.Pid).MainWindowHandle -eq 0) 'headless auth has no main window'
+            Assert-Check ((Get-AgentBrowserLocalStatus).Auth.Headless -eq $true) 'status reports actual headless mode'
+            Assert-Check ((Invoke-AgentBrowserAuth -CommandArgs @('eval', 'localStorage.getItem("abl-persist")')) -match 'retained') 'storage survives headed to headless restart'
+            Assert-Check ((Invoke-AgentBrowserAuth -CommandArgs @('eval', 'document.cookie.includes("abl_cookie=retained")')) -match 'true') 'synthetic persistent cookie survives headed to headless restart'
+            Assert-Rejected { Start-AgentBrowserAuth -Url about:blank } 'headless to headed requires stop'
+            Assert-Check (Stop-AgentBrowserAuth).Stopped 'temporary headless auth closes'
+            $authOwned = $false
+            $headedAgain = & (Join-Path $RuntimeRoot 'agent-browser-local.ps1') auth start $fixtureUrl --headed
+            $authOwned = $true
+            Assert-Check ($headedAgain.Ready -and $headedAgain.Headless -eq $false) 'explicit headed restart ready'
+            Assert-Check ((Invoke-AgentBrowserAuth -CommandArgs @('eval', 'localStorage.getItem("abl-persist")')) -match 'retained') 'storage survives headless to headed restart'
+            Assert-Check ((Invoke-AgentBrowserAuth -CommandArgs @('eval', 'document.cookie.includes("abl_cookie=retained")')) -match 'true') 'synthetic cookie survives headless to headed restart'
+            Assert-Check (Stop-AgentBrowserAuth).Stopped 'temporary auth closes with checked ownership'
             $authOwned = $false
             Assert-Check (-not (Get-AgentBrowserAuthStatus).PortOccupied) 'temporary auth port released'
         } finally {

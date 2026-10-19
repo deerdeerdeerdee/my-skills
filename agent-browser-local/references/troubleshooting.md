@@ -16,6 +16,12 @@ Runtime commands bypass user and cwd agent-browser configuration with the packag
 
 Unknown top-level commands fail before native execution. Commands use command-first syntax; reserved routing-like argument tokens are rejected conservatively even if intended as literal text. Use page evaluation when a literal reserved token must be entered. MCP, plugin management, dashboard, chat and restore workflows require separate deliberate integration; they do not inherit this wrapper's guarantees when called directly.
 
+## Persistent display modes and login
+
+`auth start [url]` defaults to headed. Use `auth start [url] --headless` for background work with the same managed profile, or `--headed` for a window. `auth status` derives `Headless` from the verified Chrome process, not from the last requested option. A mode mismatch leaves the existing browser and page unchanged: close only your task-owned instance with `auth stop`, then start the other mode. Never work around the check by launching a second Chrome on the same profile. After a manual close, check status before restarting; if native commands report a stale reserved CLI connection, use targeted `auth stop`/status diagnosis rather than global cleanup.
+
+Saved login is site-dependent. First login, MFA, CAPTCHA and session expiration may require headed operation and user input. Tests validate only synthetic cookies and localStorage in a temporary profile; they do not establish every website's login compatibility. Login data remains on the computer and is not installed from Git.
+
 ## Windows doctor
 
 Earlier local validation found that Chrome for Testing 150 could leave a GUI `chrome --version` process running and block doctor. That is historical evidence, not a claim about every current Chrome build. Doctor also auto-cleans stale files upstream. Do not run it as routine read-only diagnostics. The existing bounded maintenance path remains available only for an explicitly authorized maintenance task, with exact PID/process evidence and no broad termination.
