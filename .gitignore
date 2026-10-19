@@ -14,3 +14,9 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Installed browser runtime data must never be distributed with skills
+agent-browser-local/scripts/runtime/config.psd1
+agent-browser-local/scripts/runtime/runtime/
+agent-browser-local/scripts/runtime/logs/
+agent-browser-local/scripts/runtime/backups/
