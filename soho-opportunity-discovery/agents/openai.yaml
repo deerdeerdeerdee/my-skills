@@ -1,0 +1,4 @@
+interface:
+  display_name: "SOHO Opportunity Discovery"
+  short_description: "Research buyer demand, qualify leads and compare SKUs"
+  default_prompt: "Use $soho-opportunity-discovery to research one bounded sourcing opportunity and deliver evidence, outreach drafts and a continue-or-stop recommendation."

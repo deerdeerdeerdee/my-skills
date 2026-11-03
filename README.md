@@ -7,6 +7,7 @@ Reusable personal skills for Codex, Claude Code, Cursor and other agents that su
 | Skill | Description |
 |-------|-------------|
 | [agent-browser-local](./agent-browser-local) | Fixed local login profile and mode-selection conventions for the native agent-browser CLI |
+| [soho-opportunity-discovery](./soho-opportunity-discovery) | Demand-first sourcing research, buyer qualification, SKU evidence and bounded handoffs |
 | [layered-documentation-governance](./layered-documentation-governance) | Converge repository docs with implementation in the same change and retire superseded content |
 
 ## Installation
@@ -38,7 +39,7 @@ cp -r my-skills/<skill-name> ~/.claude/skills/
 
 Keep one directory per skill. Each `SKILL.md` owns agent instructions; references and scripts live alongside it. Update the root index when adding or renaming a skill.
 
-For browser skill updates, edit this repository and synchronize the installed skill instructions. Never copy profiles, credentials, machine configuration, logs, backups or runtime state into Git. Each computer maintains its own login data.
+For skill updates, edit this repository and synchronize the installed skill instructions. Never copy profiles, credentials, machine configuration, logs, backups or runtime state into Git. Each computer maintains its own login data.
 
 Validate skill metadata after changes. Browser commands and feature documentation come from the installed upstream CLI.
 
