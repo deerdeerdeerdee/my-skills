@@ -7,7 +7,7 @@ Reusable personal skills for Codex, Claude Code, Cursor and other agents that su
 | Skill | Description |
 |-------|-------------|
 | [agent-browser-local](./agent-browser-local) | Fixed local login profile and mode-selection conventions for the native agent-browser CLI |
-| [soho-opportunity-discovery](./soho-opportunity-discovery) | Multi-source sourcing research, buyer/SKU verification and outreach drafts, with on-demand search/browser routing and dynamic-data checks |
+| [soho-opportunity-discovery](./soho-opportunity-discovery) | Sourcing opportunity research, including specified product-to-market validation, buyer/SKU evidence and outreach drafts, with on-demand search/browser routing |
 | [layered-documentation-governance](./layered-documentation-governance) | Converge repository docs with implementation in the same change and retire superseded content |
 
 ## Installation
