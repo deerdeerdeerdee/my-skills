@@ -1,4 +1,4 @@
 interface:
   display_name: "SOHO 机会探索"
-  short_description: "Research sourcing opportunities, products and target markets"
-  default_prompt: "Use $soho-opportunity-discovery to research one bounded sourcing opportunity batch from my product, market or buyer context and deliver evidence, drafts and a continue-or-stop recommendation."
+  short_description: "外贸机会研究、负责人速读、阶段复盘与批次收尾工作流"
+  default_prompt: "Use $soho-opportunity-discovery for one bounded research batch, a read-only project-owner briefing, or a phase review; '负责人速读' must remain read-only and must not trigger new research or external actions."
